@@ -124,7 +124,7 @@ end
 % for i = 1: size(unassigned_tracks,1)
 %     assign_matrix(unassigned_tracks(i,1),size(sensor_detection{1},2)+i) = unassigned_tracks(i,2);
 % end
-% assign_matrix
+assign_matrix
 
 %% deal with unassigned tracks
 for i = 2 % sensor i
