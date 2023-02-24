@@ -116,7 +116,7 @@ end
 for i = 1: length(sensor_detection)
     for j = 1: length(sensor_detection{i})
         plot(sensor_detection{i}{j}.mean(1), sensor_detection{i}{j}.mean(2), '.b');
-        text(sensor_detection{i}{j}.mean(1)+1, sensor_detection{i}{j}.mean(2)-1, num2str(sensor_detection{i}{j}.ID))
+        text(sensor_detection{i}{j}.mean(1)+1, sensor_detection{i}{j}.mean(2)-                 1, num2str(sensor_detection{i}{j}.ID))
     end
 end
 

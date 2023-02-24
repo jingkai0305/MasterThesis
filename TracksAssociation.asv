@@ -1,0 +1,137 @@
+function [outputArg1,outputArg2] = TracksAssociation(inputArg1,inputArg2)
+%TRACKSASSOCIATION Summary of this function goes here
+%   Detailed explanation goes here
+% outputArg1 = inputArg1;
+% outputArg2 = inputArg2;
+
+
+
+%% form the association groups upon all the tracks
+threshold = 1;
+group = {};
+
+n_sensor = 3;
+
+for i = 1:n_sensor-1 % i = 1 to num_sensing-1
+    for j =  i+1:n_sensor % i+1 to num_sensing
+        [assignment, unassigned_1, unassigned_2] = ...
+            TracksPairAssign(sensor_detection{i}, sensor_detection{j}, threshold); 
+        % return assignment matrix and vectors for unassgined detections
+        
+        ID_matrix = FindIDPairFromAssigment(assignment, sensor_detection, i, j);
+        % convert assigment matrix into the ID_matrix which contains global
+        % ID for each tracks. ID matrix in shape 2*N, each column stores a
+        % pair of tracks 
+        
+        % in each column, if upper track in ID matrix is member in the
+        % group, lower track should be store in the corresponding group
+        for m = 1:size(ID_matrix,2) 
+            flag = ismember(ID_matrix(1,m), cell2mat(group));
+                if flag
+                    idx = FindGroupIdx(group, ID_matrix(1,m)); % return idx of the group 
+                    group{idx}(end+1) = ID_matrix(2,m); % add new track into this group
+                    group{idx} = unique(group{idx}); % make each cell in group unique
+                else
+                    % if upper member is not a member, create a new group at the tail
+                    group{end+1} = ID_matrix(:,m)'; 
+                end
+        end
+        
+        % store all the unassigned tracks at the tail 
+        for k = 1:length(unassigned_1)
+            if ~ismember(sensor_detection{i}{unassigned_1(k)}.ID, cell2mat(group))
+                group{end+1} = sensor_detection{i}{unassigned_1(k)}.ID;
+            end
+        end
+        
+        for k = 1:length(unassigned_2)
+            if ~ismember(sensor_detection{j}{unassigned_2(k)}.ID, cell2mat(group))
+                group{end+1} = sensor_detection{j}{unassigned_2(k)}.ID;
+            end
+        end
+        
+    end
+end
+
+% group cleaning up, if one-track group exists repeatly in any other group, remove
+% it
+for i = 1:length(group)
+    if length(group{i}) == 1
+        if sum(cell2mat(group)==group{i}) >= 2
+            group{i} = [];
+        end
+    end
+end
+
+% clean up empty group, since the previous removal results in empty cell
+group = group(~cellfun('isempty',group));
+         
+
+
+
+
+%% help functions
+function score = KLD(m1,m2,cov1,cov2)
+% calculate KLD score between two Gaussian densities
+
+    score = 0.5*( (m2-m1)'*inv(cov2)*(m2-m1) + trace(inv(cov2)*cov1)...
+        - log(det(cov1)/det(cov2)) - 2 );
+end
+
+
+function [assignment, unassigned_1, unassigned_2] = TracksPairAssign(detection_1, detection_2, threshold)
+% Input: detection_1, detection_2, assignment threshold
+% Output: assignment of two detections, unassigned detection_1, and
+% unassigned detection_2
+
+
+    % find KLD cost matrix
+    cost_matrix = zeros(size(detection_1,2), size(detection_2,2));
+    for m =1:size(detection_1,2)
+        for n =1:size(detection_2,2)
+            score1 = KLD(detection_1{m}.mean, detection_2{n}.mean, detection_1{m}.cov, detection_2{n}.cov);
+            score2 = KLD(detection_2{n}.mean, detection_1{m}.mean, detection_2{n}.cov, detection_1{m}.cov);
+            cost_matrix(m, n) = 0.5*(score1+score2);
+        end
+    end
+
+    [assignment, unassigned_1, unassigned_2] = assignDetectionsToTracks(cost_matrix, threshold);
+end
+
+
+
+function ID_matrix = FindIDPairFromAssigment(assignment, sensor_detection, num_s1, num_s2)
+% convert assgin matrix into ID_matrix
+
+    % transpose the assign matrix into 2xN
+    assignment = assignment';
+    % preallocate ID_matrix
+    ID_matrix = zeros(2,size(assignment, 2));
+    
+    for j = 1:size(assignment, 2)
+        ID_matrix(1, j) = sensor_detection{num_s1}{assignment(1,j)}.ID;
+    end
+    
+    for j = 1:size(assignment, 2)
+        ID_matrix(2, j) = sensor_detection{num_s2}{assignment(2,j)}.ID;
+    end
+    
+end
+
+
+
+function idx = FindGroupIdx(A, b)
+% given a track, return the idx of the group which contains this track
+
+    for i = 1:length(A)
+        for j = 1:length(A{i})
+            if ismember(A{i}(j), b)
+                idx = i;
+            end
+        end
+    end
+end
+
+
+end
+

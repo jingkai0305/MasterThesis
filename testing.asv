@@ -1,7 +1,5 @@
 
 clc
-clear all
-
 
 a = {[2,3], [4,6], [10,13,11,8], [1,7], 8, 9, 5};
 
@@ -29,7 +27,7 @@ triangle2_xy = [0, tan(range_2/2)*R_2, -tan(range_2/2)*R_2;
 R_3 = 20;
 range_3 = 120 * pi/180; % in rad
 triangle3_xy = [0, 0, -R_3*sin(pi-range_3)/cos(range_3/2);
-                0, R_3/cos(range_3/2), -(R_3*cos(pi-range_3))/(cos(range_3/2))];
+                0, R_3/cos(range_3/2), -(R_3-cos(pi-range_3))/(cos(range_3/2))];
             
             
             
